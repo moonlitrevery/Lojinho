@@ -1,0 +1,37 @@
+services:
+  node:
+    build:
+      dockerfile: ./Dockerfile
+      context: .
+    container_name: lojinho_api
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - 3001:3001
+    environment:
+      MYSQL_PASSWORD: root
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: mysql:latest
+    container_name: lojinhodb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: lojinho_db
+    healthcheck:
+      test:
+        ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      timeout: 30s
+      retries: 10
+      start_period: 30s
+      interval: 10s
+    ports:
+      - "33060:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped

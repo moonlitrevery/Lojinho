@@ -33,5 +33,5 @@ services:
     ports:
       - "3069:3306"
     volumes:
-      - ./Scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped

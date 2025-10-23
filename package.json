@@ -27,6 +27,7 @@
     "nodemon": "3.1.10"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "express": "5.1.0",
     "mysql2": "3.15.2"
   }

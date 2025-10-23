@@ -9,7 +9,7 @@ services:
     volumes:
       - ./:/app
     ports:
-      - 3001:3001
+      - 3067:3070
     environment:
       MYSQL_PASSWORD: root
       MYSQL_HOST: db
@@ -31,7 +31,7 @@ services:
       start_period: 30s
       interval: 10s
     ports:
-      - "3000:3306"
+      - "3069:3306"
     volumes:
       - ./Scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped

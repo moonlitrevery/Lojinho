@@ -3,7 +3,7 @@ services:
     build:
       dockerfile: ./Dockerfile
       context: .
-    container_name: lojinho_api
+    container_name: poke_api
     restart: always
     working_dir: /app
     volumes:
@@ -19,10 +19,10 @@ services:
         condition: service_healthy
   db:
     image: mysql:latest
-    container_name: lojinhodb
+    container_name: pokedb
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: lojinho_db
+      MYSQL_DATABASE: poke_db
     healthcheck:
       test:
         ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]

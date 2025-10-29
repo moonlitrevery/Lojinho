@@ -1,143 +1,112 @@
-DROP TABLE IF EXISTS order_items;
-DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS products;
-DROP TABLE IF EXISTS categories;
+-- scripts/init.sql
+-- Use the database that docker-compose already created
+USE poke_db;
+
+-- Drop tables if they exist (for clean setup)
+DROP TABLE IF EXISTS user_pokedex;
+DROP TABLE IF EXISTS pokemon_abilities;
+DROP TABLE IF EXISTS pokemon_types;
+DROP TABLE IF EXISTS abilities;
+DROP TABLE IF EXISTS types;
+DROP TABLE IF EXISTS pokemon;
+DROP TABLE IF EXISTS user_stats;
 DROP TABLE IF EXISTS users;
 
--- users table
+-- 1. USERS - Store user accounts
 CREATE TABLE users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- categories table
-CREATE TABLE categories (
-    category_id INT AUTO_INCREMENT PRIMARY KEY,
-    category_name VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT
+-- 2. POKEMON - Direct mapping from PokeAPI /pokemon/{id} endpoint
+CREATE TABLE pokemon (
+    id INT PRIMARY KEY, -- Exact ID from PokeAPI
+    name VARCHAR(100) NOT NULL,
+    height INT, -- In decimeters (as provided by API)
+    weight INT, -- In hectograms (as provided by API)
+    base_experience INT,
+    sprite_front_default VARCHAR(255),
+    sprite_front_shiny VARCHAR(255),
+    sprite_official_artwork VARCHAR(255),
+    is_default BOOLEAN DEFAULT TRUE,
+    last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- products table
-CREATE TABLE products (
-    product_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(150) NOT NULL,
-    description TEXT,
-    price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
-    stock INT DEFAULT 0 CHECK (stock >= 0),
-    category_id INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES categories(category_id)
-        ON DELETE SET NULL
+-- 3. TYPES - From /type endpoint
+CREATE TABLE types (
+    id INT PRIMARY KEY, -- Exact ID from PokeAPI
+    name VARCHAR(50) NOT NULL UNIQUE
 );
 
--- orders status table
-CREATE TABLE orders (
-    order_id INT AUTO_INCREMENT PRIMARY KEY,
+-- 4. POKEMON_TYPES - Junction table for Pokémon types
+CREATE TABLE pokemon_types (
+    pokemon_id INT NOT NULL,
+    type_id INT NOT NULL,
+    slot INT NOT NULL, -- 1 for primary, 2 for secondary
+    PRIMARY KEY (pokemon_id, type_id, slot),
+    FOREIGN KEY (pokemon_id) REFERENCES pokemon(id) ON DELETE CASCADE,
+    FOREIGN KEY (type_id) REFERENCES types(id) ON DELETE CASCADE
+);
+
+-- 5. ABILITIES - From /ability endpoint
+CREATE TABLE abilities (
+    id INT PRIMARY KEY, -- Exact ID from PokeAPI
+    name VARCHAR(100) NOT NULL UNIQUE,
+    is_main_series BOOLEAN DEFAULT TRUE
+);
+
+-- 6. POKEMON_ABILITIES - Junction table for Pokémon abilities
+CREATE TABLE pokemon_abilities (
+    pokemon_id INT NOT NULL,
+    ability_id INT NOT NULL,
+    is_hidden BOOLEAN DEFAULT FALSE,
+    slot INT NOT NULL,
+    PRIMARY KEY (pokemon_id, ability_id),
+    FOREIGN KEY (pokemon_id) REFERENCES pokemon(id) ON DELETE CASCADE,
+    FOREIGN KEY (ability_id) REFERENCES abilities(id) ON DELETE CASCADE
+);
+
+-- 7. USER_POKEDEX - Core table for user's personal Pokédex
+CREATE TABLE user_pokedex (
     user_id INT NOT NULL,
-    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('pending','paid','shipped','delivered','cancelled') DEFAULT 'pending',
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-        ON DELETE CASCADE
+    pokemon_id INT NOT NULL,
+    status ENUM('seen', 'caught') DEFAULT 'seen',
+    first_seen_at TIMESTAMP NULL,
+    first_caught_at TIMESTAMP NULL,
+    notes TEXT,
+    is_favorite BOOLEAN DEFAULT FALSE,
+    custom_name VARCHAR(100),
+    PRIMARY KEY (user_id, pokemon_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (pokemon_id) REFERENCES pokemon(id) ON DELETE CASCADE
 );
 
--- ordered items table
-CREATE TABLE order_items (
-    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL CHECK (quantity > 0),
-    price_at_purchase DECIMAL(10,2) NOT NULL CHECK (price_at_purchase >= 0),
-    FOREIGN KEY (order_id) REFERENCES orders(order_id)
-        ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-        ON DELETE CASCADE
+-- 8. USER_STATS - Track user progress
+CREATE TABLE user_stats (
+    user_id INT PRIMARY KEY,
+    total_seen INT DEFAULT 0,
+    total_caught INT DEFAULT 0,
+    completion_rate DECIMAL(5,2) DEFAULT 0.00,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- tags table
-CREATE TABLE tags (
-    tag_id INT AUTO_INCREMENT PRIMARY KEY,
-    tag_name VARCHAR(100) NOT NULL UNIQUE
-);
+-- Insert initial types
+INSERT IGNORE INTO types (id, name) VALUES
+(1, 'normal'), (2, 'fighting'), (3, 'flying'), (4, 'poison'), (5, 'ground'),
+(6, 'rock'), (7, 'bug'), (8, 'ghost'), (9, 'steel'), (10, 'fire'),
+(11, 'water'), (12, 'grass'), (13, 'electric'), (14, 'psychic'), (15, 'ice'),
+(16, 'dragon'), (17, 'dark'), (18, 'fairy');
 
--- tags <-> products table
-CREATE TABLE product_tags (
-    product_id INT NOT NULL,
-    tag_id INT NOT NULL,
-    PRIMARY KEY (product_id, tag_id),
-    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE
-);
+-- Create a test user
+INSERT IGNORE INTO users (username, email, password_hash)
+VALUES ('ash', 'ash@pokemon.com', '$2b$12$hashedpassword123');
 
--- seed to populate the tables in a synthetic/simple way.
-
-DELIMITER $$
-
-DROP PROCEDURE IF EXISTS populate_seed$$
-CREATE PROCEDURE populate_seed()
-BEGIN
-    DECLARE i INT DEFAULT 1;
-
-    WHILE i <= 100 DO
-        -- users
-        INSERT INTO users (name, email, password_hash)
-        VALUES (
-            CONCAT('User ', i),
-            CONCAT('user', i, '@gmail.com'),
-            CONCAT('$2b$12$seedhash', LPAD(i,3,'0'))
-        );
-
-        -- categories
-        INSERT INTO categories (category_name, description)
-        VALUES (
-            CONCAT('Category ', i),
-            CONCAT('Category description ', i)
-        );
-
-        -- products
-        -- price = i * 3.50, stock between 1 e 100, category_id its going to be the same i (because we created 100 categories)
-        INSERT INTO products (name, description, price, stock, category_id)
-        VALUES (
-            CONCAT('Product ', i),
-            CONCAT('Product description ', i),
-            ROUND(i * 3.50, 2),
-            (i % 100) + 1,
-            i
-        );
-
-        -- orders
-        -- assign status by cycling through the enum values
-        INSERT INTO orders (user_id, status)
-        VALUES (
-            i,
-            ELT((i % 5) + 1, 'pending', 'paid', 'shipped', 'delivered', 'cancelled')
-        );
-
-        -- tags
-        INSERT INTO tags (tag_name)
-        VALUES (
-            CONCAT('tag-', i)
-        );
-
-        -- product_tags (associate product i to tag i)
-        INSERT INTO product_tags (product_id, tag_id)
-        VALUES (i, i);
-
-        SET i = i + 1;
-    END WHILE;
-END$$
-
-DELIMITER ;
-
--- calls the procedure that populates the tables
-CALL populate_seed();
-
--- generates 100 order_items, each linked to order i -> product i
--- quantity = (product_id % 4) + 1 (values from 1 to 4)
--- price_at_purchase uses the product's current price
-INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase)
-SELECT o.order_id, p.product_id, (p.product_id % 4) + 1 AS quantity, p.price
-FROM orders o
-JOIN products p ON p.product_id = o.order_id;
+-- Create indexes for better performance
+CREATE INDEX idx_pokemon_name ON pokemon(name);
+CREATE INDEX idx_user_pokedex_user ON user_pokedex(user_id);
+CREATE INDEX idx_user_pokedex_status ON user_pokedex(status);

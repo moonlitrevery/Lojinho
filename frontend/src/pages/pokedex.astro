@@ -1,0 +1,146 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Pokédex — PokéTeam">
+  <section class="container" style="margin-top:1.5rem;">
+    <h1>Pokédex</h1>
+    <div class="card" style="background:#fff;">
+      <div class="input">
+        <label for="search">Search by name or ID</label>
+        <input id="search" placeholder="e.g. pikachu or 25" />
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <button id="searchBtn" class="button">Search</button>
+        <button id="clearBtn" class="button secondary">Clear</button>
+      </div>
+    </div>
+
+    <div id="results" class="grid" style="margin-top:1rem;"></div>
+    <div style="display:flex;justify-content:center;margin:1rem 0;">
+      <button id="loadMore" class="button">Load more</button>
+    </div>
+
+    <div id="modal" class="modal" aria-hidden="true">
+      <div class="panel" role="dialog" aria-modal="true">
+        <button class="close-x" id="closeModal" aria-label="Close">×</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    const API = 'https://pokeapi.co/api/v2/pokemon';
+    const results = document.getElementById('results');
+    const loadMoreBtn = document.getElementById('loadMore');
+    const searchInput = document.getElementById('search');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    let nextUrl = `${API}?limit=24&offset=0`;
+
+    function idFromUrl(url){
+      const m = url.match(/\/pokemon\/(\d+)\/?$/);
+      return m ? m[1] : null;
+    }
+    function imgFor(id){
+      return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+    }
+    function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+
+    function card({ id, name }){
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `
+        <div class="badge">#${id}</div>
+        <div style="height:140px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;margin:.5rem 0;">
+          <img src="${imgFor(id)}" alt="${name}" style="max-height:120px;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.2))" loading="lazy" />
+        </div>
+        <button type="button" class="link-btn name-link" data-id="${id}">${cap(name)}</button>
+      `;
+      return el;
+    }
+
+    async function load(url, { append } = { append: false }){
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!append) results.innerHTML = '';
+      for (const p of data.results){
+        const id = idFromUrl(p.url);
+        if (!id) continue;
+        results.append(card({ id, name: p.name }));
+      }
+      nextUrl = data.next;
+      loadMoreBtn.style.display = nextUrl ? 'inline-flex' : 'none';
+    }
+
+    async function search(q){
+      if (!q) { await load(`${API}?limit=24&offset=0`, { append:false }); return; }
+      try{
+        const res = await fetch(`${API}/${q.toLowerCase()}`);
+        if (!res.ok) throw new Error('not found');
+        const p = await res.json();
+        results.innerHTML = '';
+        results.append(card({ id: p.id, name: p.name }));
+        loadMoreBtn.style.display = 'none';
+      }catch(e){
+        results.innerHTML = '<div class="card">No results found.</div>';
+        loadMoreBtn.style.display = 'none';
+      }
+    }
+
+    // Modal logic
+    const modal = document.getElementById('modal');
+    const modalBody = document.getElementById('modalBody');
+    const closeModalBtn = document.getElementById('closeModal');
+
+    function closeModal(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+    function openModal(){ modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); }
+
+    async function openDetails(id){
+      try{
+        const res = await fetch(`${API}/${id}`);
+        const p = await res.json();
+        const types = p.types.map(t=>t.type.name).join(', ');
+        const abilities = p.abilities.map(a=>a.ability.name).join(', ');
+        const stats = Object.fromEntries(p.stats.map(s=>[s.stat.name, s.base_stat]));
+        modalBody.innerHTML = `
+          <div style="display:grid;grid-template-columns:240px 1fr;gap:1rem;align-items:center;">
+            <div class="card" style="background:#fff;display:flex;align-items:center;justify-content:center;height:220px;">
+              <img src="${imgFor(p.id)}" alt="${p.name}" style="max-height:200px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.25))" />
+            </div>
+            <div>
+              <h2 id="modalTitle" style="margin:.25rem 0 0 0;">${cap(p.name)} <span class="badge">#${p.id}</span></h2>
+              <p style="margin:.25rem 0"><strong>Types:</strong> ${types}</p>
+              <p style="margin:.25rem 0"><strong>Abilities:</strong> ${abilities}</p>
+              <div class="grid" style="margin-top:.5rem;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));">
+                ${Object.entries(stats).map(([k,v])=>`<div class='card' style='box-shadow:none;border-width:2px;background:#fff'><strong>${k.toUpperCase()}</strong><div>${v}</div></div>`).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+        openModal();
+      }catch(e){
+        modalBody.innerHTML = '<div class="card">Failed to load details.</div>';
+        openModal();
+      }
+    }
+
+    results.addEventListener('click', (e) => {
+      const target = e.target;
+      if (target && target.classList && target.classList.contains('name-link')){
+        const id = target.getAttribute('data-id');
+        if (id) openDetails(id);
+      }
+    });
+    closeModalBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    loadMoreBtn.addEventListener('click', () => nextUrl && load(nextUrl, { append:true }));
+    searchBtn.addEventListener('click', () => search(searchInput.value.trim()));
+    clearBtn.addEventListener('click', () => { searchInput.value=''; load(`${API}?limit=24&offset=0`, { append:false }); });
+    searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(searchInput.value.trim()); }});
+
+    load(`${API}?limit=24&offset=0`, { append:false });
+  </script>
+</BaseLayout>

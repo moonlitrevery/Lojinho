@@ -1,0 +1,114 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Team Builder — PokéTeam">
+  <section class="container" style="margin-top:1.5rem;">
+    <h1>Create a Team</h1>
+
+    <form id="team-form" class="form">
+      <div class="input">
+        <label for="teamName">Team name</label>
+        <input id="teamName" placeholder="e.g. Elite Six" required />
+      </div>
+
+      <div class="card" style="background:#fff;margin-top:1rem;">
+        <div class="input">
+          <label for="pokeQuery">Add Pokémon by name or ID</label>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <input id="pokeQuery" placeholder="pikachu or 25" style="flex:1;min-width:200px" />
+            <button type="button" id="addPoke" class="button">Add</button>
+          </div>
+        </div>
+        <small style="opacity:.8;font-weight:700">Up to 6 members. Click a slot to remove.</small>
+
+        <div id="slots" class="grid" style="margin-top:.75rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))"></div>
+      </div>
+
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem;">
+        <button type="submit" class="button">Save team</button>
+        <a class="button secondary" href="/dashboard">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <script type="module">
+    const API = 'https://pokeapi.co/api/v2/pokemon';
+    const form = document.getElementById('team-form');
+    const nameEl = document.getElementById('teamName');
+    const qEl = document.getElementById('pokeQuery');
+    const addBtn = document.getElementById('addPoke');
+    const slots = document.getElementById('slots');
+
+    function readUser(){
+      const raw = localStorage.getItem('poketeam:user');
+      if (!raw) { window.location.replace('/login'); return null; }
+      return JSON.parse(raw).username;
+    }
+    function dataKey(u){ return `poketeam:teams:${u}`; }
+
+    const members = [];
+
+    function renderSlots(){
+      slots.innerHTML = '';
+      for (let i=0;i<6;i++){
+        const m = members[i];
+        const box = document.createElement('div');
+        box.className = 'card';
+        box.style.cssText = 'height:140px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;cursor:pointer;';
+        if (m){
+          box.innerHTML = `
+            <div class="badge">#${m.id}</div>
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${m.id}.png" alt="${m.name}" style="max-height:80px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.2))" loading="lazy"/>
+            <strong>${m.name[0].toUpperCase()+m.name.slice(1)}</strong>
+          `;
+        } else {
+          box.innerHTML = '<span style="opacity:.7;font-weight:800">Empty</span>';
+        }
+        box.addEventListener('click',()=>{
+          if (m){
+            const idx = members.findIndex(x=>x.id===m.id);
+            if (idx>-1){ members.splice(idx,1); renderSlots(); }
+          }
+        });
+        slots.append(box);
+      }
+    }
+
+    async function findPokemon(q){
+      if (!q) return null;
+      const res = await fetch(`${API}/${q.toLowerCase()}`);
+      if (!res.ok) return null;
+      const p = await res.json();
+      return { id: p.id, name: p.name };
+    }
+
+    addBtn.addEventListener('click', async () => {
+      if (members.length >= 6) { alert('Team is full (max 6).'); return; }
+      const q = qEl.value.trim();
+      if (!q) return;
+      const p = await findPokemon(q);
+      if (!p) { alert('Pokémon not found.'); return; }
+      if (members.some(m=>m.id===p.id)) { alert('Already in team.'); return; }
+      members.push(p);
+      qEl.value = '';
+      renderSlots();
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const username = readUser();
+      if (!username) return;
+      const name = nameEl.value.trim();
+      if (!name) { alert('Please enter a team name.'); return; }
+      if (!members.length) { alert('Add at least 1 Pokémon.'); return; }
+      const key = dataKey(username);
+      const list = JSON.parse(localStorage.getItem(key) || '[]');
+      list.push({ name, members: members.map(m=>m.name[0].toUpperCase()+m.name.slice(1)) });
+      localStorage.setItem(key, JSON.stringify(list));
+      window.location.href = '/dashboard';
+    });
+
+    // init
+    if (readUser()) renderSlots();
+  </script>
+</BaseLayout>

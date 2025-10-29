@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Dashboard — PokéTeam">
+  <section class="container" style="margin-top:1.5rem;">
+    <h1>My Teams</h1>
+    <div style="margin:.5rem 0 1rem 0;">
+      <a class="button" href="/team-builder" id="create-team-btn">Create another team</a>
+    </div>
+    <div id="welcome" class="card" style="display:none;"></div>
+    <div id="teams" class="grid"></div>
+  </section>
+  <script type="module">
+    function el(tag, attrs = {}, children = []) {
+      const e = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        if (k === 'className') e.className = v;
+        else if (k === 'innerHTML') e.innerHTML = v;
+        else if (k === 'textContent') e.textContent = v;
+        else if (k === 'style') e.setAttribute('style', v);
+        else e.setAttribute(k, v);
+      }
+      for (const c of children) e.append(typeof c === 'string' ? document.createTextNode(c) : c);
+      return e;
+    }
+    const dataKeyFor = (u) => `poketeam:teams:${u}`;
+    const raw = localStorage.getItem('poketeam:user');
+    if (!raw) {
+      window.location.replace('/login');
+    } else {
+      const { username } = JSON.parse(raw);
+      const welcome = document.getElementById('welcome');
+      welcome.style.display = 'block';
+      welcome.textContent = `Welcome, ${username}!`;
+      const teamsEl = document.getElementById('teams');
+      const list = JSON.parse(localStorage.getItem(dataKeyFor(username)) || '[]');
+      if (!list.length) {
+        teamsEl.append(el('div', { className: 'card', innerHTML: 'No teams yet. Click "Create another team" to build one.' }));
+      } else {
+        for (const t of list) {
+          const card = el('div', { className: 'card' });
+          const header = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:.5rem;' }, [
+            el('h3', { textContent: t.name, style: 'margin:0;' }),
+            el('span', { className: 'badge', textContent: `${(t.members||[]).length}/6` })
+          ]);
+          const members = el('div', { className: 'grid', style: 'margin-top:.75rem;' });
+          const membersList = (t.members || []);
+          for (let i = 0; i < 6; i++) {
+            const label = membersList[i] || 'Empty';
+            members.append(el('div', { className: 'card', style: 'height:48px;background:#fff;opacity:.9;box-shadow:none;border-width:2px;display:flex;align-items:center;justify-content:center;padding:.5rem;' }, [label]));
+          }
+          card.append(header, members);
+          teamsEl.append(card);
+        }
+      }
+    }
+  </script>
+</BaseLayout>

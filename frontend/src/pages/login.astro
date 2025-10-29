@@ -1,0 +1,39 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Login — PokéTeam">
+  <section class="container" style="margin-top:1.5rem;">
+    <h1>Login</h1>
+    <form id="login-form" class="form" autocomplete="on">
+      <div class="input">
+        <label for="username">Username</label>
+        <input id="username" name="username" required placeholder="AshKetchum" />
+      </div>
+      <div class="input">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required placeholder="••••••••" />
+      </div>
+      <button type="submit" class="button">Login</button>
+    </form>
+  </section>
+  <script type="module">
+    const form = document.getElementById('login-form');
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const uEl = document.getElementById('username');
+      const pEl = document.getElementById('password');
+      const username = uEl && 'value' in uEl ? uEl.value.trim() : '';
+      const pwd = pEl && 'value' in pEl ? pEl.value.trim() : '';
+      if (!username || !pwd) { alert('Please enter username and password.'); return; }
+      localStorage.setItem('poketeam:user', JSON.stringify({ username }));
+      const key = `poketeam:teams:${username}`;
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, JSON.stringify([
+          { name: 'Kanto Starters', members: ['Bulbasaur','Charmander','Squirtle'] },
+          { name: 'Electric Dream', members: ['Pikachu','Raichu'] }
+        ]));
+      }
+      window.location.href = '/dashboard';
+    });
+  </script>
+</BaseLayout>

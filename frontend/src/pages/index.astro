@@ -1,0 +1,19 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import PokeBanner from "../components/PokeBanner.astro";
+const subtitle = "Catch, build, and share your ultimate squads";
+---
+<BaseLayout title="PokéTeam — Build your ultimate Pokémon team">
+  <PokeBanner title="PokéTeam" subtitle={subtitle}>
+    <div class="cta">
+      <a class="button secondary" href="/pokedex">Pokédex</a>
+      <a class="button" href="/login">Create your team</a>
+    </div>
+  </PokeBanner>
+  <section class="container" style="margin-top:2rem;">
+    <div class="card">
+      <h2 style="margin:0 0 .5rem 0;">Welcome Trainer!</h2>
+      <p style="margin:0;">Browse the Pokédex or sign in to start crafting teams. This is a front‑end prototype; data will be wired to the PokéAPI later.</p>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,8 @@
+---
+interface Props { name: string; members?: string[] }
+const { name, members = [] } = Astro.props as Props;
+---
+<div class="card">
+  <h3 style="margin:0 0 .5rem 0">{name}</h3>
+  <p style="margin:0;font-weight:700">Members: {members.length}/6</p>
+</div>

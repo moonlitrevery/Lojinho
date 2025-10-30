@@ -1,24 +1,51 @@
 services:
-  node:
+  backend:
     build:
-      dockerfile: ./Dockerfile
-      context: .
-    container_name: poke_api
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: poke_backend
     restart: always
     working_dir: /app
     volumes:
-      - ./:/app
+      - ./backend:/app
+      - /app/node_modules
     ports:
-      - 3067:3070
+      - "3067:3067" # ← Changed to match your app's port
     environment:
-      MYSQL_PASSWORD: root
       MYSQL_HOST: db
-      MYSQL_PORT: 3306
+      MYSQL_PORT: 3306 # ← Container port
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: poke_db # ← Fixed variable name
+      PORT: 3067 # ← Optional: set the port
     depends_on:
       db:
         condition: service_healthy
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: poke_frontend
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "4321:4321"
+    environment:
+      NODE_ENV: development
+      PUBLIC_API_URL: http://localhost:3067
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4321"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   db:
-    image: mysql:latest
+    image: mysql:8.0
     container_name: pokedb
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -31,7 +58,7 @@ services:
       start_period: 30s
       interval: 10s
     ports:
-      - "3069:3306"
+      - "3069:3306" # Host:3069 → Container:3306
     volumes:
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped

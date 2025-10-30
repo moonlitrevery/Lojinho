@@ -1,6 +1,10 @@
-import { defineConfig } from 'astro/config';
+import { defineConfig } from "astro/config";
 
 export default defineConfig({
-  site: 'http://localhost:4321',
-  output: 'static'
+  site: "http://localhost:4321",
+  output: "server",
+  server: {
+    host: true,
+    port: 4321,
+  },
 });

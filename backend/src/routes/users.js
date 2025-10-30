@@ -12,6 +12,9 @@ router.use(timeLog);
 
 router.get("/users", UserController.findAll);
 router.get("/users/:id", UserController.findById);
-router.post("/users", UserController.create);
+router.put("/users/:id", UserController.update);
+router.post("/users/register", UserController.create);
+router.delete("/users/:id", UserController.delete);
+router.post("/users/login", UserController.login);
 
 module.exports = router;

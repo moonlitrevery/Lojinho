@@ -18,6 +18,7 @@ services:
       MYSQL_PASSWORD: root
       MYSQL_DATABASE: poke_db # ← Fixed variable name
       PORT: 3067 # ← Optional: set the port
+      NODE_ENV: production
     depends_on:
       db:
         condition: service_healthy

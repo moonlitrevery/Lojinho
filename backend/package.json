@@ -9,10 +9,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest --runInBand",
-    "sync:first-gen": "node scripts/syncPokemon.js first-gen",
-    "sync:range": "node scripts/syncPokemon.js range",
-    "sync:list": "node scripts/syncPokemon.js list"
+    "test": "jest --runInBand"
   },
   "repository": {
     "type": "git",

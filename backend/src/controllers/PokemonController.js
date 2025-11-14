@@ -3,7 +3,7 @@ const PokemonService = require("../services/PokemonService");
 class PokemonController {
   async getAllPokemons(req, res) {
     try {
-      const { limit, offset } = req.query;
+      const { limit, offset } = req.query || {};
       const pokemons = await PokemonService.getAllPokemons(limit, offset);
 
       res.json({

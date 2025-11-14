@@ -16,7 +16,9 @@ jest.mock("../../services/UserService", () => ({
   // auth
   login: jest.fn(),
   authenticate: jest.fn(),
+  validateUserCredentials: jest.fn(),
 }));
+
 const UserService = require("../../services/UserService");
 
 // helper de response mockado (encadeável)
@@ -228,15 +230,14 @@ describe("UserController", () => {
   describe("login", () => {
     it("deve logar e retornar token/dados", async () => {
       const payload = { email: "a@a.com", password: "123" };
-      const auth = { token: "jwt", user: { id: 1 } };
-      UserService.login.mockResolvedValueOnce(auth);
-      UserService.authenticate.mockResolvedValueOnce(auth);
-      
+const auth = { token: "jwt", user: { id: 1 } };
+UserService.validateUserCredentials.mockResolvedValueOnce(auth);
 
-      const req = { body: payload };
-      const res = mockRes();
+const req = { body: payload };
+const res = mockRes();
 
-      await UserController.login(req, res);
+await UserController.login(req, res);
+
 
       // não exigimos mais que tenha sido chamado com 'payload',
       // pois o controller pode pré-processar o body
@@ -251,8 +252,8 @@ describe("UserController", () => {
     it("deve retornar 401 (ou 404/500) se credenciais inválidas", async () => {
       const err = new Error("Credenciais inválidas");
       err.status = 401;
-      UserService.login.mockRejectedValueOnce(err);
-      UserService.authenticate.mockRejectedValueOnce(err);
+      UserService.validateUserCredentials.mockRejectedValueOnce(err);
+
 
       const req = { body: { email: "x", password: "y" } };
       const res = mockRes();

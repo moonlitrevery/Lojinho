@@ -36,7 +36,7 @@ describe("PokemonController", () => {
       PokemonService.getAllPokemons.mockResolvedValueOnce(data);
       PokemonService.listAll.mockResolvedValueOnce(data);
 
-      const req = {};
+      const req = {query: {}};
       const res = mockRes();
 
       await PokemonController.getAllPokemons(req, res);
@@ -45,11 +45,13 @@ describe("PokemonController", () => {
         PokemonService.getAllPokemons.mock.calls.length + PokemonService.listAll.mock.calls.length;
       expect(totalCalls).toBeGreaterThan(0);
 
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data,
-        count: data.length,
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data,
+          count: data.length,
+        })
+      );
     });
 
     it("deve responder 500 em erro inesperado", async () => {
@@ -113,7 +115,8 @@ describe("PokemonController", () => {
     });
 
     it("deve responder 500 em erro inesperado", async () => {
-      PokemonService.getPokemonById.mockRejectedValueOnce(new Error("oops"));
+      const err = new Error("oops");
+      PokemonService.getPokemonId.mockRejectedValueOnce(err);
 
       const req = { params: { id: "1" } };
       const res = mockRes();

@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest --runInBand"
+    "test": "NODE_OPTIONS=--localstorage-file=.jest-localstorage jest --runInBand"
   },
   "repository": {
     "type": "git",

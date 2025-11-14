@@ -14,12 +14,14 @@ describe("TeamService", () => {
     const created = { id: 1, user_id: 9, team_name: "Time A", pokemon_ids: "1,2,3" };
     TeamModel.createTeam.mockResolvedValueOnce(created);
 
-    // a service atual não aceita/repasa argumentos; testamos o comportamento real
-    const res = await TeamService.createTeam();
+    const payload = { user_id: 9, team_name: "Time A", pokemon_ids: "1,2,3" };
 
-    expect(TeamModel.createTeam).toHaveBeenCalledWith(); // sem args
+    const res = await TeamService.createTeam(payload);
+
+    expect(TeamModel.createTeam).toHaveBeenCalledWith(payload);
     expect(res).toBe(created);
   });
+
 
   test("findTeamById lança erro quando não encontrar", async () => {
     TeamModel.findTeamById.mockResolvedValueOnce(null);
@@ -36,7 +38,8 @@ describe("TeamService", () => {
     //     if (!team) throw new Error("Time não encontrado");
     //     return team;  // <--- adicionar
     //   }
-    await expect(TeamService.findTeamById(2)).resolves.toBeUndefined();
+    await expect(TeamService.findTeamById(2)).resolves.toEqual(team);
+
 
   });
 });

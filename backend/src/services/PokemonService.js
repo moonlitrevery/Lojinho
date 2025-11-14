@@ -29,6 +29,10 @@ class PokemonService {
 
   async getPokemonId(pokemonId) {
     try {
+      if (!pokemonId) {
+        throw new Error("Pokémon não encontrado");
+      }
+      
       // Tenta buscar do banco primeiro
       let pokemon = await PokemonModel.findById(pokemonId);
       

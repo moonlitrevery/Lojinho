@@ -98,7 +98,7 @@ class UserController {
 
       res.status(500).json({
         success: false,
-        errro: "Erro ao atualizar usuário",
+        error: "Erro ao atualizar usuário",
       });
     }
   }

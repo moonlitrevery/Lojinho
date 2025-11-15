@@ -40,11 +40,33 @@ class UserModel {
   }
 
   async update(userId, userData) {
-    await db.query(`UPDATE users SET username = ?, email = ? WHERE id = ?`, [
-      userData.name,
-      userData.email,
-      userId,
-    ]);
+    const updates = [];
+    const values = [];
+
+    if (userData.username !== undefined) {
+      updates.push('username = ?');
+      values.push(userData.username);
+    }
+
+    if (userData.email !== undefined) {
+      updates.push('email = ?');
+      values.push(userData.email);
+    }
+
+    if (userData.password_hash !== undefined) {
+      updates.push('password_hash = ?');
+      values.push(userData.password_hash);
+    }
+
+    if (updates.length === 0) {
+      throw new Error('Nenhum campo fornecido para atualização');
+    }
+
+    values.push(userId);
+
+    const sql = `UPDATE users SET ${updates.join(',')} WHERE id = ?`;
+    await db.query(sql, values);
+
     return this.findById(userId);
   }
 

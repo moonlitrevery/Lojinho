@@ -1,0 +1,78 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Register — PokéTeam">
+  <section class="container" style="margin-top:1.5rem;">
+    <h1>Create your account</h1>
+    <form id="register-form" class="form" autocomplete="on">
+      <div class="input">
+        <label for="username">Username</label>
+        <input id="username" name="username" required placeholder="AshKetchum" />
+      </div>
+      <div class="input">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required placeholder="ash@example.com" />
+      </div>
+      <div class="input">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required placeholder="At least 6 characters" />
+      </div>
+      <button type="submit" class="button">Register</button>
+      <p style="margin-top:.75rem;">Already have an account? <a href="/login">Log in</a>.</p>
+    </form>
+  </section>
+  <script type="module">
+    import { API_BASE } from "../lib/api.js";
+
+    const form = document.getElementById('register-form');
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const usernameEl = document.getElementById('username');
+      const emailEl = document.getElementById('email');
+      const passwordEl = document.getElementById('password');
+
+      const username = usernameEl && 'value' in usernameEl ? usernameEl.value.trim() : '';
+      const email = emailEl && 'value' in emailEl ? emailEl.value.trim() : '';
+      const password = passwordEl && 'value' in passwordEl ? passwordEl.value.trim() : '';
+
+      if (!username || !email || !password) {
+        alert('Please fill all fields.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/users/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, email, password }),
+        });
+
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok || !payload || payload.success !== true || !payload.data) {
+          const message = payload?.error || 'Unable to register. Please check your data and try again.';
+          alert(message);
+          return;
+        }
+
+        // Auto-login newly registered user
+        const user = payload.data;
+        localStorage.setItem('poketeam:user', JSON.stringify({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+        }));
+
+        alert('Account created successfully!');
+        window.location.href = '/dashboard';
+      } catch (error) {
+        console.error('Registration request failed:', error);
+        alert('Unable to contact the server. Please try again later.');
+      }
+    });
+  </script>
+</BaseLayout>

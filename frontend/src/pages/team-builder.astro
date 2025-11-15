@@ -32,7 +32,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   </section>
 
   <script type="module">
-    const API = 'https://pokeapi.co/api/v2/pokemon';
+    import { API_BASE } from "../lib/api.js";
+
+    const POKE_API = 'https://pokeapi.co/api/v2/pokemon';
     const form = document.getElementById('team-form');
     const nameEl = document.getElementById('teamName');
     const qEl = document.getElementById('pokeQuery');
@@ -42,9 +44,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     function readUser(){
       const raw = localStorage.getItem('poketeam:user');
       if (!raw) { window.location.replace('/login'); return null; }
-      return JSON.parse(raw).username;
+      return JSON.parse(raw);
     }
-    function dataKey(u){ return `poketeam:teams:${u}`; }
 
     const members = [];
 
@@ -54,12 +55,17 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         const m = members[i];
         const box = document.createElement('div');
         box.className = 'card';
-        box.style.cssText = 'height:140px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;cursor:pointer;';
+        box.style.cssText = 'height:160px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;cursor:pointer;';
         if (m){
+          const niceName = m.name[0].toUpperCase()+m.name.slice(1);
+          const typeLabels = (m.types || []).map(t => t[0].toUpperCase()+t.slice(1));
           box.innerHTML = `
             <div class="badge">#${m.id}</div>
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${m.id}.png" alt="${m.name}" style="max-height:80px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.2))" loading="lazy"/>
-            <strong>${m.name[0].toUpperCase()+m.name.slice(1)}</strong>
+            <img src="${m.image || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${m.id}.png`}" alt="${niceName}" style="max-height:80px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.2))" loading="lazy"/>
+            <strong>${niceName}</strong>
+            ${typeLabels.length ? `<div style="display:flex;gap:.25rem;flex-wrap:wrap;justify-content:center;">
+              ${typeLabels.map(t => `<span class="badge" style="font-size:.7rem;">${t}</span>`).join("")}
+            </div>` : ""}
           `;
         } else {
           box.innerHTML = '<span style="opacity:.7;font-weight:800">Empty</span>';
@@ -76,10 +82,12 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
     async function findPokemon(q){
       if (!q) return null;
-      const res = await fetch(`${API}/${q.toLowerCase()}`);
+      const res = await fetch(`${POKE_API}/${q.toLowerCase()}`);
       if (!res.ok) return null;
       const p = await res.json();
-      return { id: p.id, name: p.name };
+      const types = Array.isArray(p.types) ? p.types.map(t => t.type?.name).filter(Boolean) : [];
+      const image = p.sprites?.other?.['official-artwork']?.front_default || p.sprites?.front_default || null;
+      return { id: p.id, name: p.name, types, image };
     }
 
     addBtn.addEventListener('click', async () => {
@@ -94,18 +102,57 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       renderSlots();
     });
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const username = readUser();
-      if (!username) return;
+      const user = readUser();
+      if (!user) return;
+
       const name = nameEl.value.trim();
       if (!name) { alert('Please enter a team name.'); return; }
       if (!members.length) { alert('Add at least 1 Pokémon.'); return; }
-      const key = dataKey(username);
-      const list = JSON.parse(localStorage.getItem(key) || '[]');
-      list.push({ name, members: members.map(m=>m.name[0].toUpperCase()+m.name.slice(1)) });
-      localStorage.setItem(key, JSON.stringify(list));
-      window.location.href = '/dashboard';
+
+      try {
+        // 1) Create the team for this user
+        const createRes = await fetch(`${API_BASE}/teams/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id,
+            team_name: name,
+          }),
+        });
+        const createPayload = await createRes.json().catch(() => null);
+
+        if (!createRes.ok || !createPayload || createPayload.success !== true || !createPayload.data) {
+          const msg = createPayload?.error || 'Failed to create team.';
+          alert(msg);
+          return;
+        }
+
+        const team = createPayload.data;
+        const teamId = team.id || team.team_id;
+        if (!teamId) {
+          alert('Team created but ID is missing in response.');
+          return;
+        }
+
+        // 2) Add each Pokémon to the team via backend
+        for (const m of members) {
+          const res = await fetch(`${API_BASE}/teams/${teamId}/pokemon/${m.id}`, {
+            method: 'POST',
+          });
+          const payload = await res.json().catch(() => null);
+          if (!res.ok || !payload || payload.success !== true) {
+            console.warn('Failed to add Pokémon to team:', m, payload);
+          }
+        }
+
+        alert('Team saved successfully!');
+        window.location.href = '/dashboard';
+      } catch (err) {
+        console.error('Failed to save team:', err);
+        alert('Unable to save team. Please try again later.');
+      }
     });
 
     // init

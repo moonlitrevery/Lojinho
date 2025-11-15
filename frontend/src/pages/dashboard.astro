@@ -11,6 +11,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     <div id="teams" class="grid"></div>
   </section>
   <script type="module">
+    import { API_BASE } from "../lib/api.js";
+
     function el(tag, attrs = {}, children = []) {
       const e = document.createElement(tag);
       for (const [k, v] of Object.entries(attrs)) {
@@ -23,36 +25,66 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       for (const c of children) e.append(typeof c === 'string' ? document.createTextNode(c) : c);
       return e;
     }
-    const dataKeyFor = (u) => `poketeam:teams:${u}`;
-    const raw = localStorage.getItem('poketeam:user');
-    if (!raw) {
-      window.location.replace('/login');
-    } else {
-      const { username } = JSON.parse(raw);
-      const welcome = document.getElementById('welcome');
-      welcome.style.display = 'block';
-      welcome.textContent = `Welcome, ${username}!`;
+
+    function readUser() {
+      const raw = localStorage.getItem('poketeam:user');
+      if (!raw) { window.location.replace('/login'); return null; }
+      return JSON.parse(raw);
+    }
+
+    async function loadTeamsForUser(user) {
       const teamsEl = document.getElementById('teams');
-      const list = JSON.parse(localStorage.getItem(dataKeyFor(username)) || '[]');
-      if (!list.length) {
-        teamsEl.append(el('div', { className: 'card', innerHTML: 'No teams yet. Click "Create another team" to build one.' }));
-      } else {
-        for (const t of list) {
+      teamsEl.innerHTML = '';
+
+      try {
+        // Backend currently exposes /teams (all teams). Filter by user on frontend.
+        const res = await fetch(`${API_BASE}/teams`);
+        const payload = await res.json().catch(() => null);
+
+        if (!res.ok || !payload || payload.success !== true || !Array.isArray(payload.data)) {
+          const msg = payload?.error || 'Failed to load teams.';
+          teamsEl.append(el('div', { className: 'card', innerHTML: msg }));
+          return;
+        }
+
+        const allTeams = payload.data;
+        const userTeams = allTeams.filter(t => t.user_id === user.id);
+
+        if (!userTeams.length) {
+          teamsEl.append(el('div', { className: 'card', innerHTML: 'No teams yet. Click "Create another team" to build one.' }));
+          return;
+        }
+
+        for (const t of userTeams) {
           const card = el('div', { className: 'card' });
           const header = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:.5rem;' }, [
-            el('h3', { textContent: t.name, style: 'margin:0;' }),
-            el('span', { className: 'badge', textContent: `${(t.members||[]).length}/6` })
+            el('h3', { textContent: t.team_name || t.name || 'Unnamed team', style: 'margin:0;' }),
+            el('span', { className: 'badge', textContent: `${(t.pokemon_ids || []).length}/6` })
           ]);
+
           const members = el('div', { className: 'grid', style: 'margin-top:.75rem;' });
-          const membersList = (t.members || []);
+          const membersList = (t.pokemon_ids || []);
           for (let i = 0; i < 6; i++) {
-            const label = membersList[i] || 'Empty';
+            const label = typeof membersList[i] === 'number' ? `#${membersList[i]}` : 'Empty';
             members.append(el('div', { className: 'card', style: 'height:48px;background:#fff;opacity:.9;box-shadow:none;border-width:2px;display:flex;align-items:center;justify-content:center;padding:.5rem;' }, [label]));
           }
+
           card.append(header, members);
           teamsEl.append(card);
         }
+      } catch (err) {
+        console.error('Failed to load teams:', err);
+        teamsEl.append(el('div', { className: 'card', innerHTML: 'Error loading teams. Please try again later.' }));
       }
+    }
+
+    const user = readUser();
+    if (user) {
+      const welcome = document.getElementById('welcome');
+      welcome.style.display = 'block';
+      const name = user.username || user.email || 'Trainer';
+      welcome.textContent = `Welcome, ${name}!`;
+      loadTeamsForUser(user);
     }
   </script>
 </BaseLayout>

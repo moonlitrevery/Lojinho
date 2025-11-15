@@ -6,34 +6,75 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     <h1>Login</h1>
     <form id="login-form" class="form" autocomplete="on">
       <div class="input">
-        <label for="username">Username</label>
-        <input id="username" name="username" required placeholder="AshKetchum" />
+        <label for="username">Email</label>
+        <input id="username" name="username" type="email" required placeholder="ash@example.com" />
       </div>
       <div class="input">
         <label for="password">Password</label>
         <input id="password" name="password" type="password" required placeholder="••••••••" />
       </div>
       <button type="submit" class="button">Login</button>
+      <p style="margin-top:.75rem;">Dont have an account? <a href="/register">Register</a>.</p>
     </form>
   </section>
   <script type="module">
+    import { API_BASE } from "../lib/api.js";
+
     const form = document.getElementById('login-form');
-    form?.addEventListener('submit', (e) => {
+    form?.addEventListener('submit', async (e) => {
       e.preventDefault();
+
       const uEl = document.getElementById('username');
       const pEl = document.getElementById('password');
-      const username = uEl && 'value' in uEl ? uEl.value.trim() : '';
-      const pwd = pEl && 'value' in pEl ? pEl.value.trim() : '';
-      if (!username || !pwd) { alert('Please enter username and password.'); return; }
-      localStorage.setItem('poketeam:user', JSON.stringify({ username }));
-      const key = `poketeam:teams:${username}`;
-      if (!localStorage.getItem(key)) {
-        localStorage.setItem(key, JSON.stringify([
-          { name: 'Kanto Starters', members: ['Bulbasaur','Charmander','Squirtle'] },
-          { name: 'Electric Dream', members: ['Pikachu','Raichu'] }
-        ]));
+      const email = uEl && 'value' in uEl ? uEl.value.trim() : '';
+      const password = pEl && 'value' in pEl ? pEl.value.trim() : '';
+
+      if (!email || !password) {
+        alert('Please enter email and password.');
+        return;
       }
-      window.location.href = '/dashboard';
+
+      try {
+        const response = await fetch(`${API_BASE}/users/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok || !payload || payload.success !== true || !payload.data) {
+          const message = payload?.error || 'Invalid credentials. Please check your email and password.';
+          alert(message);
+          return;
+        }
+
+        const user = payload.data;
+
+        // Persist authenticated user locally for the rest of the app
+        localStorage.setItem('poketeam:user', JSON.stringify({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+        }));
+
+        const usernameForKey = user.username || email;
+        const key = `poketeam:teams:${usernameForKey}`;
+
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, JSON.stringify([
+            { name: 'Kanto Starters', members: ['Bulbasaur','Charmander','Squirtle'] },
+            { name: 'Electric Dream', members: ['Pikachu','Raichu'] },
+          ]));
+        }
+
+        window.location.href = '/dashboard';
+      } catch (error) {
+        console.error('Login request failed:', error);
+        alert('Unable to contact the server. Please try again later.');
+      }
     });
   </script>
 </BaseLayout>

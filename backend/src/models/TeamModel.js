@@ -2,16 +2,17 @@ const db = require("../db/connection");
 
 class TeamModel {
   async createTeam(userData) {
-    const sql = `INSERT INTO user_teams (user_id, team_name) VALUES (?, ?)`;
+    const sql = `INSERT INTO user_teams (user_id, team_name, pokemon_ids) VALUES (?, ?, ?)`;
 
     const [result] = await db.query(sql, [
       userData.user_id,
       userData.team_name,
-      JSON.stringify([]),
+      JSON.stringify(userData.pokemon_ids || []),
     ]);
 
     return this.findTeamById(result.insertId);
   }
+
 
   async findTeamById(teamId) {
     const [rows] = await db.query(

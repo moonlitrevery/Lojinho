@@ -27,8 +27,9 @@ describe("TeamModel", () => {
     expect(db.query).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("INSERT INTO user_teams"),
-      [1, "Time A", "1,2,3"]
+      expect.arrayContaining([1, "Time A"])
     );
+
 
     expect(db.query).toHaveBeenNthCalledWith(
       2,

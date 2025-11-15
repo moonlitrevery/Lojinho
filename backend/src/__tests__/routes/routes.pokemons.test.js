@@ -6,6 +6,8 @@ const request = require("supertest");
 jest.mock("../../controllers/PokemonController", () => ({
   getAllPokemons: jest.fn((req, res) => res.json({ ok: true })),
   getPokemonId: jest.fn((req, res) => res.json({ id: req.params.id })),
+  searchPokemon: jest.fn((req, res) => res.json({ results: [] })),
+  getStats: jest.fn((req, res) => res.json({ stats: true })),
 }));
 
 const router = require("../../routes/pokemons");

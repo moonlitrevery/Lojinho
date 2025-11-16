@@ -2,8 +2,13 @@ const helmet = require('helmet');
 const cors = require('cors');
 
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:4321',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:4321',
+    'http://127.0.0.1:4321',
+    'http://poke_frontend:4321',
+    'http://frontend:4321'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 };

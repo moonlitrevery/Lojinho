@@ -5,9 +5,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   <section class="container" style="margin-top:1.5rem;">
     <h1>Pokédex</h1>
     <div class="card" style="background:#fff;">
-      <div class="input">
+      <div class="input" style="position:relative;">
         <label for="search">Search by name or ID</label>
-        <input id="search" placeholder="e.g. pikachu or 25" />
+        <input id="search" placeholder="e.g. pikachu or 25" autocomplete="off" />
+        <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
       </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
         <button id="searchBtn" class="button">Search</button>
@@ -35,6 +36,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     const searchInput = document.getElementById('search');
     const searchBtn = document.getElementById('searchBtn');
     const clearBtn = document.getElementById('clearBtn');
+    const dropdown = document.getElementById('autocomplete-dropdown');
+
+    let allPokemonNames = [];
+    let autocompleteTimeout = null;
 
     let nextUrl = `${API}?limit=24&offset=0`;
 
@@ -136,11 +141,69 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
+    // Load all Pokémon names for autocomplete
+    async function loadAllPokemonNames() {
+      try {
+        const res = await fetch(`${API}?limit=1025`);
+        const data = await res.json();
+        allPokemonNames = data.results.map(p => p.name);
+      } catch (e) {
+        console.error('Failed to load Pokémon names:', e);
+      }
+    }
+
+    function showAutocomplete(query) {
+      if (!query || query.length < 2) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      const matches = allPokemonNames
+        .filter(name => name.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 8);
+
+      if (matches.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      dropdown.innerHTML = matches
+        .map(name => `<div class="autocomplete-item" data-name="${name}">${cap(name)}</div>`)
+        .join('');
+      dropdown.style.display = 'block';
+    }
+
+    function hideAutocomplete() {
+      setTimeout(() => {
+        dropdown.style.display = 'none';
+      }, 200);
+    }
+
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(autocompleteTimeout);
+      autocompleteTimeout = setTimeout(() => {
+        showAutocomplete(e.target.value.trim());
+      }, 200);
+    });
+
+    searchInput.addEventListener('blur', hideAutocomplete);
+
+    dropdown.addEventListener('click', (e) => {
+      const item = e.target.closest('.autocomplete-item');
+      if (item) {
+        const name = item.getAttribute('data-name');
+        searchInput.value = name;
+        dropdown.style.display = 'none';
+        search(name);
+      }
+    });
+
     loadMoreBtn.addEventListener('click', () => nextUrl && load(nextUrl, { append:true }));
     searchBtn.addEventListener('click', () => search(searchInput.value.trim()));
-    clearBtn.addEventListener('click', () => { searchInput.value=''; load(`${API}?limit=24&offset=0`, { append:false }); });
-    searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(searchInput.value.trim()); }});
+    clearBtn.addEventListener('click', () => { searchInput.value=''; dropdown.style.display = 'none'; load(`${API}?limit=24&offset=0`, { append:false }); });
+    searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); dropdown.style.display = 'none'; search(searchInput.value.trim()); }});
 
+    loadAllPokemonNames();
     load(`${API}?limit=24&offset=0`, { append:false });
   </script>
 </BaseLayout>

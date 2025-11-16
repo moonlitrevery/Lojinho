@@ -43,32 +43,37 @@ class UserModel {
     const updates = [];
     const values = [];
 
-    if (userData.username !== undefined) {
-      updates.push('username = ?');
-      values.push(userData.username);
+    // aceita tanto `username` quanto `name` como alias
+    const username = userData.username ?? userData.name;
+
+    if (username !== undefined) {
+      updates.push("username = ?");
+      values.push(username);
     }
 
     if (userData.email !== undefined) {
-      updates.push('email = ?');
+      updates.push("email = ?");
       values.push(userData.email);
     }
 
     if (userData.password_hash !== undefined) {
-      updates.push('password_hash = ?');
+      updates.push("password_hash = ?");
       values.push(userData.password_hash);
     }
 
     if (updates.length === 0) {
-      throw new Error('Nenhum campo fornecido para atualização');
+      throw new Error("Nenhum campo fornecido para atualização");
     }
 
     values.push(userId);
 
-    const sql = `UPDATE users SET ${updates.join(',')} WHERE id = ?`;
+    // IMPORTANTE: espaço depois da vírgula
+    const sql = `UPDATE users SET ${updates.join(", ")} WHERE id = ?`;
     await db.query(sql, values);
 
     return this.findById(userId);
   }
+
 
   async delete(userId) {
     const [result] = await db.query(`DELETE FROM users WHERE id = ?`, [userId]);

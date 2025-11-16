@@ -74,5 +74,5 @@ module.exports = {
   sanitizeInput,
   preventParameterPollution,
   securityLogger,
-  cors: cors(corsOptions)
+  corsMiddleware: cors(corsOptions)
 };

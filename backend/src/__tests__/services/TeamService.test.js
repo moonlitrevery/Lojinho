@@ -31,15 +31,6 @@ describe("TeamService", () => {
   test("findTeamById retorna o time quando encontrar (comportamento desejado)", async () => {
     const team = { id: 2, user_id: 7 };
     TeamModel.findTeamById.mockResolvedValueOnce(team);
-
-    // A IMPLEMENTAÇÃO ATUAL NÃO DÁ `return` — este teste vai falhar até você corrigir:
-    //   async findTeamById(userId) {
-    //     const team = await TeamModel.findTeamById(userId);
-    //     if (!team) throw new Error("Time não encontrado");
-    //     return team;  // <--- adicionar
-    //   }
     await expect(TeamService.findTeamById(2)).resolves.toEqual(team);
-
-
   });
 });

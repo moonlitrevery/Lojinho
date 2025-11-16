@@ -238,9 +238,6 @@ const res = mockRes();
 
 await UserController.login(req, res);
 
-
-      // não exigimos mais que tenha sido chamado com 'payload',
-      // pois o controller pode pré-processar o body
       expect(res.json).toHaveBeenCalledWith(
        expect.objectContaining({
        success: true,

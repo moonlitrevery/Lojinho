@@ -5,7 +5,7 @@ const TeamsRoute = require("./routes/teams");
 
 const {
   helmetConfig,
-  cors,
+  corsMiddleware,
   sanitizeInput,
   preventParameterPollution,
   securityLogger
@@ -20,7 +20,7 @@ const {
 const app = express();
 
 app.use(helmetConfig);
-app.use(cors);
+app.use(corsMiddleware);
 app.use(express.json({ limit: '10mb' })); // Limitar tamanho do payload
 app.use(sanitizeInput);
 app.use(preventParameterPollution);

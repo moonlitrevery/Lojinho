@@ -37,7 +37,6 @@ describe("UserService", () => {
       UserModel.findByEmail.mockResolvedValueOnce(null);
       bcrypt.hash.mockResolvedValueOnce("HASHED");
 
-      // service provavelmente chama UserModel.create e retorna o usuário sem password_hash
       UserModel.create.mockResolvedValueOnce({
         id: 10, username: "brock", email: "brock@kanto.com", password_hash: "HASHED"
       });

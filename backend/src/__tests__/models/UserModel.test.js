@@ -28,7 +28,7 @@ describe("UserModel", () => {
 
     expect(db.query).toHaveBeenNthCalledWith(
       2,
-      expect.any(String), // SELECT by id (o SQL exato está parcialmente truncado no arquivo)
+      expect.any(String),
       [10]
     );
 
